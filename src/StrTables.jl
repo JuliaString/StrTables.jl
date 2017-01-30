@@ -152,9 +152,6 @@ const type_tab = (UInt8, UInt16, UInt32, UInt64, UInt128,
                   Float16, Float32, Float64)
 const SupTypes = Union{type_tab...}
 
-_get_code{T<:Union{UInt16,UInt32}}(::Type{StrTable{T}}) = STRTAB_CODE
-_get_code{T,S,O<:Union{UInt16,UInt32}}(::Type{PackedTable{T,S,O}}) = PACKED_CODE
-_get_code(::Type{String})   = STRING_CODE
 for (i, typ) in enumerate(type_tab)
     @eval _get_code(::Type{$typ})  = $((i+BASE_CODE)%UInt8)
 end
@@ -182,14 +179,8 @@ end
 write_value{T<:SupTypes}(io::IO, val::Vector{T}) =
     (write(io, _get_code(T) | 0x80, length(val)%UInt32, val))
 
-function write_value(io::IO, tab::StrTable)
-    write(io, STRTAB_CODE)
-    write_value(io, tab.offsetvec)
-    write_value(io, tab.namtab)
-end
-
-function write_value(io::IO, tab::PackedTable)
-    write(io, PACKED_CODE)
+function write_value{T,S,O}(io::IO, tab::PackedTable{T,S,O})
+    write(io, (T == String && S == UInt8) ? STRTAB_CODE : PACKED_CODE)
     write_value(io, tab.offsetvec)
     write_value(io, tab.namtab)
 end
