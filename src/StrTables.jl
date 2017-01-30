@@ -27,26 +27,18 @@ export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 abstract AbstractPackedTable{T} <: AbstractVector{T}
 
 """
-Compact string table
-Designed to save memory compared to a `Vector{String}`
-Allows for fast lookup of ranges when input was sorted
-Can be saved/loaded to/from a file quickly
-"""
-immutable StrTable{T} <: AbstractPackedTable{String}
-    offsetvec::Vector{T}
-    namtab::Vector{UInt8}
-end
-
-"""
 Compact table
 Designed to save memory compared to a `Vector{Vector{S}}`
 Allows for fast lookup of ranges when input was sorted
 Can be saved/loaded to/from a file quickly
 """
-immutable PackedTable{S,T} <: AbstractPackedTable{Vector{S}}
-    offsetvec::Vector{T}
+immutable PackedTable{T,S,O} <: AbstractPackedTable{T}
+    offsetvec::Vector{O}
     namtab::Vector{S}
 end
+
+PackedTable{T,S,O}(::Type{T}, offvec::Vector{O}, namtab::Vector{S}) =
+    PackedTable{T,S,O}(offvec, namtab)
 
 """
 Abstract type for Entity tables:
@@ -54,44 +46,38 @@ Supports lookupname, matchchar, matches, longestmatches, completions
 """
 abstract AbstractEntityTable <: AbstractVector{String}
 
-"""Make a single table of a vector of strings"""
-function StrTable{T<:AbstractString}(strvec::Vector{T})
-    # convert names into a vector of UInt8 and vector of UInt16 offsets
-    namvec = Vector{UInt8}()
+_getsize(el::String) = sizeof(el)
+_getsize{T}(el::Vector{T}) = length(el)
+
+function pack_table{T,S}(::Type{T}, ::Type{S}, strvec)
+    namvec = Vector{S}()
     offvec = Vector{UInt32}(length(strvec)+1)
     offvec[1] = 0%UInt32
     offset = 0%UInt32
     for (i,str) in enumerate(strvec)
-        offset += sizeof(str)
+        offset += _getsize(str)
         offvec[i+1] = offset
-        append!(namvec, Vector{UInt8}(str))
+        append!(namvec, Vector{S}(str))
     end
     (offset > 0x0ffff
-     ? StrTable{UInt32}(offvec, namvec)
-     : StrTable{UInt16}(copy!(Vector{UInt16}(length(strvec)+1), offvec), namvec))
+     ? PackedTable{T,S,UInt32}(offvec, namvec)
+     : PackedTable{T,S,UInt16}(copy!(Vector{UInt16}(length(strvec)+1), offvec), namvec))
 end
 
-"""Make a single table of a vector of vectors of type T"""
-function PackedTable{T}(strvec::Vector{Vector{T}})
-    # convert names into a vector of UInt8 and vector of UInt16 offsets
-    namvec = Vector{T}()
-    offvec = Vector{UInt32}(length(strvec)+1)
-    offvec[1] = 0%UInt32
-    offset = 0%UInt32
-    for (i,str) in enumerate(strvec)
-        offset += length(str)
-        offvec[i+1] = offset
-        append!(namvec, Vector{T}(str))
-    end
-    (offset > 0x0ffff
-     ? PackedTable{T,UInt32}(offvec, namvec)
-     : PackedTable{T,UInt16}(copy!(Vector{UInt16}(length(strvec)+1), offvec), namvec))
-end
+"""Make a single table of a vector of elements of type T"""
+PackedTable{T}(strvec::Vector{T}) = pack_table(T, isa(T, String) ? UInt8 : eltype(T), strvec)
 
-Base.getindex(str::PackedTable, ind::Integer) =
-    str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]]
-Base.getindex(str::StrTable, ind::Integer) =
-    String(str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]])
+"""
+Compact string table
+Designed to save memory compared to a `Vector{String}`
+Allows for fast lookup of ranges when input was sorted
+Can be saved/loaded to/from a file quickly
+"""
+typealias StrTable{T} PackedTable{T,UInt8}
+StrTable{T<:AbstractString}(strvec::Vector{T}) = pack_table(String, UInt8, strvec)
+
+Base.getindex{T}(str::AbstractPackedTable{T}, ind::Integer) =
+    T(str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]])
 Base.size(str::AbstractPackedTable) = (length(str.offsetvec)-1,)
 Base.linearindexing{T<:AbstractPackedTable}(::Type{T}) = Base.LinearFast()
 Base.start(str::AbstractPackedTable) = 1
@@ -100,30 +86,54 @@ Base.done(str::AbstractPackedTable, state) = state == length(str.offsetvec)
 
 # Get all indices that start with a string
 
-"""Return true if this string matches the beginning at a particular index"""
-@inline function _cmpsub(str::String, tab::StrTable, i)
-    len = sizeof(str)
-    off = tab.offsetvec[i]+1
-    (tab.offsetvec[i+1] - off + 1) < len && return false
-    ccall(:memcmp, Int32, (Ptr{UInt8}, Ptr{UInt8}, UInt), str, pointer(tab.namtab, off), len) == 0
+_memcmp(v1, v2, l) = ccall(:memcmp, Int32, (Ptr{UInt8}, Ptr{UInt8}, UInt), v1, v2, l)
+_veccmp(l1, l2, v1, v2) = _memcmp(v1, v2, min(l1, l2))
+
+@inline function _lexcmp(l1, l2, v1, v2)
+    c = _veccmp(l1, l2, v1, v2)
+    c < 0 ? -1 : c > 0 ? +1 : cmp(l1, l2)
 end
 
+_ltvec(v1, v2) = _lexcmp(sizeof(v1), sizeof(v2), v1, v2) < 0
+
 """Return the range of indices of values that whose beginning matches the string"""
-matchfirstrng(tab::AbstractPackedTable, str::AbstractString) = matchfirstrng(b, string(str))
-function matchfirstrng(tab::AbstractPackedTable, str::String)
-    pos = searchsortedfirst(tab, str)
+matchfirstrng(tab::AbstractPackedTable, str::AbstractString) = matchfirstrng(tab, string(str))
+matchfirstrng(tab::AbstractPackedTable, str::String) = matchfirstrng(tab, Vector{UInt8}(str))
+function matchfirstrng{T}(tab::AbstractPackedTable, str::Vector{T})
+    pos = searchsortedfirst(tab, str, lt=_ltvec)
     len = length(tab)
     pos > len && return pos:pos-1
     beg = pos
-    while pos <= len && _cmpsub(str, tab, pos)
+    l1 = sizeof(str)
+    prevoff = tab.offsetvec[pos]
+    while pos <= len
+        curoff = tab.offsetvec[pos+1]
+        l1 > curoff - prevoff && break
+        _memcmp(str, pointer(tab.namtab, prevoff+1), l1) != 0 && break
+        prevoff = curoff
         pos += 1
     end
     beg:pos-1
 end
 
 """Return a vector of values that whose beginning matches the string"""
-matchfirst(tab::AbstractPackedTable, str::AbstractString) = tab[matchfirstrng(tab, str)]
+matchfirst(tab::AbstractPackedTable, str) = tab[matchfirstrng(tab, str)]
     
+"""Given an entity name, return the string it represents, or an empty string if not found"""
+function lookupname end
+
+"""Given a character, return all exact matches to the character as a vector"""
+function matchchar end
+
+"""Given a string, return all exact matches to the string as a vector"""
+function matches end
+
+"""Given a string, return all of the longest matches to the beginning of the string as a vector"""
+function longestmatches end
+
+"""Given a string, return all of the entity names that start with that string, if any"""
+function completions end
+
 # Support for saving and loading
 
 # This use a simple format to store single Unsigned values (UInt8-UInt64),
@@ -143,7 +153,7 @@ const type_tab = (UInt8, UInt16, UInt32, UInt64, UInt128,
 const SupTypes = Union{type_tab...}
 
 _get_code{T<:Union{UInt16,UInt32}}(::Type{StrTable{T}}) = STRTAB_CODE
-_get_code{T,S<:Union{UInt16,UInt32}}(::Type{PackedTable{T,S}}) = PACKED_CODE
+_get_code{T,S,O<:Union{UInt16,UInt32}}(::Type{PackedTable{T,S,O}}) = PACKED_CODE
 _get_code(::Type{String})   = STRING_CODE
 for (i, typ) in enumerate(type_tab)
     @eval _get_code(::Type{$typ})  = $((i+BASE_CODE)%UInt8)
@@ -209,11 +219,11 @@ function read_value(io::IO)
     elseif typ == STRTAB_CODE
         off = read_value(io)
         nam = read_value(io)
-        res = StrTable(off, nam)
+        res = PackedTable(String, off, nam)
     elseif typ == PACKED_CODE
         off = read_value(io)
         nam = read_value(io)
-        res = PackedTable(off, nam)
+        res = PackedTable(typeof(nam), off, nam)
     elseif typ == STRING1_CODE
         len = read(io, UInt8)
         res = String(read(io, len))
