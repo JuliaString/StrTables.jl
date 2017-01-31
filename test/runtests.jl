@@ -20,6 +20,7 @@ btab     = PackedTable(testbin)
     @test stab[end] == "\U1f596 Spock Hands"
     @test ST.matchfirstrng(stab, "A") == 1:3
     @test ST.matchfirstrng(stab, "Julia") == 7:11
+    @test ST.matchfirstrng(stab, SubString("My name is Julia", 12)) == 7:11
     @test ST.matchfirst(stab, "A") == ["AA", "AAAAA", "Alex"]
     @test ST.matchfirst(stab, "Julia") ==
         ["Julia", "JuliaDB", "JuliaIO", "JuliaLang", "JuliaString"]
@@ -45,8 +46,14 @@ testout = [stab, btab,
            Float32(9.87654321), 1.23456789,
            "Test case",
            "† \U1f596",
+           SubString("My name is Spock", 12),
            medstr,
            bigstr]
+
+@testset "Read/write values" begin
+    io = IOBuffer(b"\x7f")
+    @test_throws ErrorException ST.read_value(io)
+end
 
 @testset "Save/Load tables" begin
     ST.save(testfile, testout)

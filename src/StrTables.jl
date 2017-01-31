@@ -97,7 +97,7 @@ end
 _ltvec(v1, v2) = _lexcmp(sizeof(v1), sizeof(v2), v1, v2) < 0
 
 """Return the range of indices of values that whose beginning matches the string"""
-matchfirstrng(tab::AbstractPackedTable, str::AbstractString) = matchfirstrng(tab, string(str))
+matchfirstrng(tab::AbstractPackedTable, str::AbstractString) = matchfirstrng(tab, String(str))
 matchfirstrng(tab::AbstractPackedTable, str::String) = matchfirstrng(tab, Vector{UInt8}(str))
 function matchfirstrng{T}(tab::AbstractPackedTable, str::Vector{T})
     pos = searchsortedfirst(tab, str, lt=_ltvec)
