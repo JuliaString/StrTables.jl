@@ -53,6 +53,7 @@ testout = [stab, btab,
 @testset "Read/write values" begin
     io = IOBuffer(b"\x7f")
     @test_throws ErrorException ST.read_value(io)
+    @test_throws ErrorException ST.write_value(io, String(Vector{UInt8}(2^32)))
 end
 
 @testset "Save/Load tables" begin
