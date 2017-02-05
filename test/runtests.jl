@@ -54,8 +54,14 @@ testout = [stab, btab,
     io = IOBuffer(b"\x7f")
     @test_throws ErrorException ST.read_value(io)
     @static if sizeof(Int) > 4
-        x = IOBuffer(2^32) ; x.size = 2^32
-        @test_throws ErrorException ST.write_value(io, String(x))
+        @static if VERSION < v"0.6-"
+            @test_throws ErrorException ST.write_value(io, String(Vector{UInt8}(2^32)))
+        else
+            @static if !is_linux()
+                x = IOBuffer(2^32) ; x.size = 2^32
+                @test_throws ErrorException ST.write_value(io, String(x))
+            end
+        end
     end
 end
 
