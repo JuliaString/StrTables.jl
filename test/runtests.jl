@@ -54,7 +54,8 @@ testout = [stab, btab,
     io = IOBuffer(b"\x7f")
     @test_throws ErrorException ST.read_value(io)
     @static if sizeof(Int) > 4
-        @test_throws ErrorException ST.write_value(io, String(Vector{UInt8}(2^32)))
+        x = IOBuffer(2^32) ; x.size = 2^32
+        @test_throws ErrorException ST.write_value(io, String(x))
     end
 end
 
