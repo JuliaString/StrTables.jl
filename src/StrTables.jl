@@ -24,7 +24,7 @@ License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LIC
 module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 
-abstract AbstractPackedTable{T} <: AbstractVector{T}
+eval(Expr(:abstract, :(AbstractPackedTable{T} <: AbstractVector{T})))
 
 """
 Compact table
@@ -40,11 +40,12 @@ end
 PackedTable{T,S,O}(::Type{T}, offvec::Vector{O}, namtab::Vector{S}) =
     PackedTable{T,S,O}(offvec, namtab)
 
+eval(Expr(:abstract, :(AbstractEntityTable <: AbstractVector{String})))
 """
 Abstract type for Entity tables:
 Supports lookupname, matchchar, matches, longestmatches, completions
 """
-abstract AbstractEntityTable <: AbstractVector{String}
+AbstractEntityTable
 
 _getsize(el::String) = sizeof(el)
 _getsize{T}(el::Vector{T}) = length(el)
@@ -67,19 +68,24 @@ end
 """Make a single table of a vector of elements of type T"""
 PackedTable{T}(strvec::Vector{T}) = pack_table(T, isa(T, String) ? UInt8 : eltype(T), strvec)
 
+eval(Expr(:typealias, :(StrTable{T}), :(PackedTable{T,UInt8})))
 """
 Compact string table
 Designed to save memory compared to a `Vector{String}`
 Allows for fast lookup of ranges when input was sorted
 Can be saved/loaded to/from a file quickly
 """
-typealias StrTable{T} PackedTable{T,UInt8}
+StrTable
 StrTable{T<:AbstractString}(strvec::Vector{T}) = pack_table(String, UInt8, strvec)
 
 Base.getindex{T}(str::AbstractPackedTable{T}, ind::Integer) =
     T(str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]])
 Base.size(str::AbstractPackedTable) = (length(str.offsetvec)-1,)
-Base.linearindexing{T<:AbstractPackedTable}(::Type{T}) = Base.LinearFast()
+@static if VERSION < v"0.6.0-dev.2840"
+    Base.linearindexing{T<:AbstractPackedTable}(::Type{T}) = Base.LinearFast()
+else
+    Base.IndexStyle{T<:AbstractPackedTable}(::Type{T}) = Base.LinearFast()
+end
 Base.start(str::AbstractPackedTable) = 1
 Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
 Base.done(str::AbstractPackedTable, state) = state == length(str.offsetvec)
