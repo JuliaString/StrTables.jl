@@ -24,7 +24,7 @@ License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LIC
 module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 
-eval(Expr(:abstract, :(AbstractPackedTable{T} <: AbstractVector{T})))
+abstract type AbstractPackedTable{T} <: AbstractVector{T} end
 
 """
 Compact table
@@ -32,15 +32,16 @@ Designed to save memory compared to a `Vector{Vector{S}}`
 Allows for fast lookup of ranges when input was sorted
 Can be saved/loaded to/from a file quickly
 """
-immutable PackedTable{T,S,O} <: AbstractPackedTable{T}
+struct PackedTable{T,S,O} <: AbstractPackedTable{T}
     offsetvec::Vector{O}
     namtab::Vector{S}
 end
 
-PackedTable{T,S,O}(::Type{T}, offvec::Vector{O}, namtab::Vector{S}) =
+PackedTable(::Type{T}, offvec::Vector{O}, namtab::Vector{S}) where {T,S,O} =
     PackedTable{T,S,O}(offvec, namtab)
 
-eval(Expr(:abstract, :(AbstractEntityTable <: AbstractVector{String})))
+abstract type AbstractEntityTable <: AbstractVector{String} end
+
 """
 Abstract type for Entity tables:
 Supports lookupname, matchchar, matches, longestmatches, completions
@@ -48,9 +49,9 @@ Supports lookupname, matchchar, matches, longestmatches, completions
 AbstractEntityTable
 
 _getsize(el::String) = sizeof(el)
-_getsize{T}(el::Vector{T}) = length(el)
+_getsize(el::Vector{<:Any}) = length(el)
 
-function pack_table{T,S}(::Type{T}, ::Type{S}, strvec)
+function pack_table(::Type{T}, ::Type{S}, strvec) where {T,S}
     namvec = Vector{S}()
     offvec = Vector{UInt32}(length(strvec)+1)
     offvec[1] = 0%UInt32
@@ -65,10 +66,18 @@ function pack_table{T,S}(::Type{T}, ::Type{S}, strvec)
      : PackedTable{T,S,UInt16}(copy!(Vector{UInt16}(length(strvec)+1), offvec), namvec))
 end
 
-"""Make a single table of a vector of elements of type T"""
-PackedTable{T}(strvec::Vector{T}) = pack_table(T, isa(T, String) ? UInt8 : eltype(T), strvec)
+@static if VERSION < v"0.7.0-DEV"
+read_vector(s::IO, T::Type, len::Integer) = read(s, T, len)
+else
+read_vector(s::IO, T::Type, len::Integer) = read!(s, Array{T}(uninitialized, len))
+end
 
-eval(Expr(:typealias, :(StrTable{T}), :(PackedTable{T,UInt8})))
+"""Make a single table of a vector of elements of type T"""
+PackedTable(strvec::Vector{T}) where {T} =
+    pack_table(T, isa(T, String) ? UInt8 : eltype(T), strvec)
+
+const StrTable = PackedTable{T,UInt8} where {T}
+
 """
 Compact string table
 Designed to save memory compared to a `Vector{String}`
@@ -76,16 +85,13 @@ Allows for fast lookup of ranges when input was sorted
 Can be saved/loaded to/from a file quickly
 """
 StrTable
-StrTable{T<:AbstractString}(strvec::Vector{T}) = pack_table(String, UInt8, strvec)
 
-Base.getindex{T}(str::AbstractPackedTable{T}, ind::Integer) =
+StrTable(strvec::Vector{<:AbstractString}) = pack_table(String, UInt8, strvec)
+
+Base.getindex(str::AbstractPackedTable{T}, ind::Integer) where {T} =
     T(str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]])
 Base.size(str::AbstractPackedTable) = (length(str.offsetvec)-1,)
-@static if VERSION < v"0.6.0-dev.2840"
-    Base.linearindexing{T<:AbstractPackedTable}(::Type{T}) = Base.LinearFast()
-else
-    Base.IndexStyle{T<:AbstractPackedTable}(::Type{T}) = Base.LinearFast()
-end
+Base.IndexStyle(::Type{<:AbstractPackedTable}) = Base.LinearFast()
 Base.start(str::AbstractPackedTable) = 1
 Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
 Base.done(str::AbstractPackedTable, state) = state == length(str.offsetvec)
@@ -105,7 +111,7 @@ _ltvec(v1, v2) = _lexcmp(sizeof(v1), sizeof(v2), v1, v2) < 0
 """Return the range of indices of values that whose beginning matches the string"""
 matchfirstrng(tab::AbstractPackedTable, str::AbstractString) = matchfirstrng(tab, String(str))
 matchfirstrng(tab::AbstractPackedTable, str::String) = matchfirstrng(tab, Vector{UInt8}(str))
-function matchfirstrng{T}(tab::AbstractPackedTable, str::Vector{T})
+function matchfirstrng(tab::AbstractPackedTable, str::Vector{T}) where {T}
     pos = searchsortedfirst(tab, str, lt=_ltvec)
     len = length(tab)
     pos > len && return pos:pos-1
@@ -166,9 +172,9 @@ const MAX_CODE = (length(type_tab)+BASE_CODE)%UInt8
 
 const VER = 0x00000001
 
-write_value{T<:SupTypes}(io::IO, val::T) = write(io, _get_code(T), val)
+write_value(io::IO, val::T) where {T<:SupTypes} = write(io, _get_code(T), val)
 
-write_value{T<:AbstractString}(io::IO, val::T) = write_value(io, String(val))
+write_value(io::IO, val::AbstractString) = write_value(io, String(val))
 function write_value(io::IO, str::String)
     siz = sizeof(str)
     if siz < 256
@@ -182,10 +188,10 @@ function write_value(io::IO, str::String)
     end
 end
 
-write_value{T<:SupTypes}(io::IO, val::Vector{T}) =
+write_value(io::IO, val::Vector{T}) where {T<:SupTypes} =
     (write(io, _get_code(T) | 0x80, length(val)%UInt32, val))
 
-function write_value{T,S,O}(io::IO, tab::PackedTable{T,S,O})
+function write_value(io::IO, tab::PackedTable{T,S,O}) where {T,S,O}
     write(io, (T == String && S == UInt8) ? STRTAB_CODE : PACKED_CODE)
     write_value(io, tab.offsetvec)
     write_value(io, tab.namtab)
@@ -212,7 +218,7 @@ function read_value(io::IO)
     # Check for vector
     if (BASE_CODE|0x80) < typ <= (MAX_CODE|0x80)
         len = read(io, UInt32)
-        res = read(io, type_tab[typ-0x80-BASE_CODE], len)
+        res = read_vector(io, type_tab[typ-0x80-BASE_CODE], len)
     elseif typ == STRTAB_CODE
         off = read_value(io)
         nam = read_value(io)
@@ -255,4 +261,4 @@ function load(filename::AbstractString)
     end
 end
 
-end # module
+end # module StrTables
