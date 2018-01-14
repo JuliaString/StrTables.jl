@@ -3,7 +3,7 @@ __precompile__()
 Simple String Table and load/save functions
 
 Author:     Scott Paul Jones
-Copyright:  2017 Gandalf Software, Inc (and any future contributors)
+Copyright:  2017-2018 Gandalf Software, Inc (and any future contributors)
 License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LICENSE.md)
 
 ## Public API:
@@ -23,6 +23,38 @@ License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LIC
 """
 module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
+
+# Utility functions for building tables
+export create_vector, sortsplit!, _contains, _replace
+
+_contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : contains(s, r)
+_replace(s, p)  = @static VERSION < v"0.7.0-DEV" ? replace(s, p.first, p.second) : replace(s, p)
+uninit(T, len)  = @static VERSION < v"0.7.0-DEV" ? T(len) : T(uninitialized, len)
+
+create_vector(T, len) = uninit(Vector{T}, len)
+
+@static if VERSION < v"0.7.0-DEV"
+    codeunits(s::String) = Vector{UInt8}(s)
+    const copyto! = copy!
+    export codeunits, copyto!
+else
+    using Dates
+    export now
+end
+
+function sortsplit!(index::Vector{UInt16}, vec::Vector{Tuple{T, UInt16}}, base) where {T}
+    sort!(vec)
+    len = length(vec)
+    valvec = create_vector(T, len)
+    indvec = create_vector(UInt16, len)
+    for (i, val) in enumerate(vec)
+        valvec[i], ind = val
+        indvec[i] = ind
+        index[ind] = UInt16(base + i)
+    end
+    base += len
+    valvec, indvec, base
+end
 
 abstract type AbstractPackedTable{T} <: AbstractVector{T} end
 
@@ -53,23 +85,23 @@ _getsize(el::Vector{<:Any}) = length(el)
 
 function pack_table(::Type{T}, ::Type{S}, strvec) where {T,S}
     namvec = Vector{S}()
-    offvec = Vector{UInt32}(length(strvec)+1)
+    offvec = create_vector(UInt32, length(strvec)+1)
     offvec[1] = 0%UInt32
     offset = 0%UInt32
     for (i,str) in enumerate(strvec)
         offset += _getsize(str)
         offvec[i+1] = offset
-        append!(namvec, Vector{S}(str))
+        append!(namvec, convert(Vector{S}, str))
     end
     (offset > 0x0ffff
      ? PackedTable{T,S,UInt32}(offvec, namvec)
-     : PackedTable{T,S,UInt16}(copy!(Vector{UInt16}(length(strvec)+1), offvec), namvec))
+     : PackedTable{T,S,UInt16}(copyto!(create_vector(UInt16, length(strvec)+1), offvec), namvec))
 end
 
 @static if VERSION < v"0.7.0-DEV"
 read_vector(s::IO, T::Type, len::Integer) = read(s, T, len)
 else
-read_vector(s::IO, T::Type, len::Integer) = read!(s, Array{T}(uninitialized, len))
+read_vector(s::IO, T::Type, len::Integer) = read!(s, create_vector(T, len))
 end
 
 """Make a single table of a vector of elements of type T"""
@@ -110,7 +142,7 @@ _ltvec(v1, v2) = _lexcmp(sizeof(v1), sizeof(v2), v1, v2) < 0
 
 """Return the range of indices of values that whose beginning matches the string"""
 matchfirstrng(tab::AbstractPackedTable, str::AbstractString) = matchfirstrng(tab, String(str))
-matchfirstrng(tab::AbstractPackedTable, str::String) = matchfirstrng(tab, Vector{UInt8}(str))
+matchfirstrng(tab::AbstractPackedTable, str::String) = matchfirstrng(tab, codeunits(str))
 function matchfirstrng(tab::AbstractPackedTable, str::Vector{T}) where {T}
     pos = searchsortedfirst(tab, str, lt=_ltvec)
     len = length(tab)
