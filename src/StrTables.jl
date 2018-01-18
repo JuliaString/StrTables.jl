@@ -88,10 +88,10 @@ function pack_table(::Type{T}, ::Type{S}, strvec) where {T,S}
     offvec = create_vector(UInt32, length(strvec)+1)
     offvec[1] = 0%UInt32
     offset = 0%UInt32
-    for (i,str) in enumerate(strvec)
+    for (i, str) in enumerate(strvec)
         offset += _getsize(str)
         offvec[i+1] = offset
-        append!(namvec, codeunits(str))
+        append!(namvec, T == String ? codeunits(str) : str)
     end
     (offset > 0x0ffff
      ? PackedTable{T,S,UInt32}(offvec, namvec)
@@ -105,10 +105,10 @@ read_vector(s::IO, T::Type, len::Integer) = read!(s, create_vector(T, len))
 end
 
 """Make a single table of a vector of elements of type T"""
-PackedTable(strvec::Vector{T}) where {T} =
-    pack_table(T, isa(T, String) ? UInt8 : eltype(T), strvec)
+PackedTable(strvec::Vector{T}) where {T} = pack_table(T, eltype(T), strvec)
+PackedTable(strvec::Vector{String}) = pack_table(String, UInt8, strvec)
 
-const StrTable = PackedTable{T,UInt8} where {T}
+const StrTable = PackedTable{T, UInt8} where {T}
 
 """
 Compact string table
