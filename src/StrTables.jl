@@ -91,7 +91,7 @@ function pack_table(::Type{T}, ::Type{S}, strvec) where {T,S}
     for (i,str) in enumerate(strvec)
         offset += _getsize(str)
         offvec[i+1] = offset
-        append!(namvec, convert(Vector{S}, str))
+        append!(namvec, codeunits(str))
     end
     (offset > 0x0ffff
      ? PackedTable{T,S,UInt32}(offvec, namvec)
