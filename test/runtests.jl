@@ -1,5 +1,6 @@
 using StrTables
-using Base.Test
+
+@static VERSION < v"0.7.0-DEV" ? (using Base.Test) : (using Test)
 
 ST = StrTables
 
@@ -13,33 +14,39 @@ stab     = StrTable(teststrs)
 testbin  = [Vector{UInt8}(s) for s in stab]
 btab     = PackedTable(testbin)
 
+const strs = ("AA", "\U1f596 Spock Hands", "A", "Julia", "My name is Julia")
+const as = ["AA", "AAAAA", "Alex"]
+const js = ["Julia", "JuliaDB", "JuliaIO", "JuliaLang", "JuliaString"]
+
 @testset "StrTables" begin
     @test length(stab) == length(teststrs)
     @test stab == teststrs
-    @test stab[1] == "AA"
-    @test stab[end] == "\U1f596 Spock Hands"
-    @test ST.matchfirstrng(stab, "A") == 1:3
-    @test ST.matchfirstrng(stab, "Julia") == 7:11
-    @test ST.matchfirstrng(stab, SubString("My name is Julia", 12)) == 7:11
-    @test ST.matchfirst(stab, "A") == ["AA", "AAAAA", "Alex"]
-    @test ST.matchfirst(stab, "Julia") ==
-        ["Julia", "JuliaDB", "JuliaIO", "JuliaLang", "JuliaString"]
+    @test stab[1] == strs[1]
+    @test stab[end] == strs[2]
+    @test ST.matchfirstrng(stab, strs[3]) == 1:3
+    @test ST.matchfirstrng(stab, strs[4]) == 7:11
+    @test ST.matchfirstrng(stab, SubString(strs[5], 12)) == 7:11
+    @test ST.matchfirst(stab, strs[3]) == as
+    @test ST.matchfirst(stab, strs[4]) == js
 end
+
+bstrs = [Vector{UInt8}(codeunits(s)) for s in strs]
+bas   = [Vector{UInt8}(codeunits(s)) for s in as]
+bjs   = [Vector{UInt8}(codeunits(s)) for s in js]
 
 @testset "PackedTable" begin
     @test length(btab) == length(testbin)
     @test btab == testbin
-    @test btab[1] == b"AA"
-    @test btab[end] == b"\U1f596 Spock Hands"
-    @test ST.matchfirstrng(btab, b"A") == 1:3
-    @test ST.matchfirstrng(btab, b"Julia") == 7:11
-    @test ST.matchfirst(btab, b"A") == [b"AA", b"AAAAA", b"Alex"]
-    @test ST.matchfirst(btab, b"Julia") ==
-        [b"Julia", b"JuliaDB", b"JuliaIO", b"JuliaLang", b"JuliaString"]
+    @test btab[1] == bstrs[1]
+    @test btab[end] == bstrs[2]
+    @test ST.matchfirstrng(btab, bstrs[3]) == 1:3
+    @test ST.matchfirstrng(btab, bstrs[4]) == 7:11
+    @test ST.matchfirst(btab, bstrs[3]) == bas
+    @test ST.matchfirst(btab, bstrs[4]) == bjs
 end
 
-medstr = String(rand(Char,300))
-bigstr = repeat("abcdefgh",8200)
+medstr = String(rand(Char, 300))
+bigstr = repeat("abcdefgh", 8200)
 testout = [stab, btab,
            0x1, 2%UInt16, 3%UInt32, 4%UInt64, 5%UInt128,
            6%Int8, 7%Int16, 8%Int32, 9%Int64, 10%Int128,
@@ -54,13 +61,9 @@ testout = [stab, btab,
     io = IOBuffer(b"\x7f")
     @test_throws ErrorException ST.read_value(io)
     @static if sizeof(Int) > 4
-        @static if VERSION < v"0.6-"
-            @test_throws ErrorException ST.write_value(io, String(Vector{UInt8}(2^32)))
-        else
-            @static if !is_linux()
-                x = IOBuffer(2^32) ; x.size = 2^32
-                @test_throws ErrorException ST.write_value(io, String(x))
-            end
+        @static if !is_linux()
+            x = IOBuffer(2^32) ; x.size = 2^32
+            @test_throws ErrorException ST.write_value(io, String(x))
         end
     end
 end
