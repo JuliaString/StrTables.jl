@@ -30,9 +30,9 @@ const js = ["Julia", "JuliaDB", "JuliaIO", "JuliaLang", "JuliaString"]
     @test ST.matchfirst(stab, strs[4]) == js
 end
 
-bstrs = [Vector{UInt8}(codeunits(s)) for s in strs]
-bas   = [Vector{UInt8}(codeunits(s)) for s in as]
-bjs   = [Vector{UInt8}(codeunits(s)) for s in js]
+bstrs = [_codeunits(s) for s in strs]
+bas   = [_codeunits(s) for s in as]
+bjs   = [_codeunits(s) for s in js]
 
 @testset "PackedTable" begin
     @test length(btab) == length(testbin)

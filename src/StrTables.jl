@@ -27,6 +27,7 @@ export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 # Utility functions for building tables
 export create_vector, sortsplit!, _contains, _replace
 
+_codeunits(s)   = Vector{UInt8}(@static VERSION < v"0.7.0-DEV" ? s : codeunits(s))
 _contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : contains(s, r)
 _replace(s, p)  = @static VERSION < v"0.7.0-DEV" ? replace(s, p.first, p.second) : replace(s, p)
 uninit(T, len)  = @static VERSION < v"0.7.0-DEV" ? T(len) : T(uninitialized, len)
@@ -34,9 +35,8 @@ uninit(T, len)  = @static VERSION < v"0.7.0-DEV" ? T(len) : T(uninitialized, len
 create_vector(T, len) = uninit(Vector{T}, len)
 
 @static if VERSION < v"0.7.0-DEV"
-    codeunits(s::String) = Vector{UInt8}(s)
     const copyto! = copy!
-    export codeunits, copyto!
+    export _codeunits, copyto!
 else
     using Dates
     export now
@@ -91,7 +91,7 @@ function pack_table(::Type{T}, ::Type{S}, strvec) where {T,S}
     for (i, str) in enumerate(strvec)
         offset += _getsize(str)
         offvec[i+1] = offset
-        append!(namvec, T == String ? codeunits(str) : str)
+        append!(namvec, T == String ? _codeunits(str) : str)
     end
     (offset > 0x0ffff
      ? PackedTable{T,S,UInt32}(offvec, namvec)
@@ -142,7 +142,7 @@ _ltvec(v1, v2) = _lexcmp(sizeof(v1), sizeof(v2), v1, v2) < 0
 
 """Return the range of indices of values that whose beginning matches the string"""
 matchfirstrng(tab::AbstractPackedTable, str::AbstractString) = matchfirstrng(tab, String(str))
-matchfirstrng(tab::AbstractPackedTable, str::String) = matchfirstrng(tab, codeunits(str))
+matchfirstrng(tab::AbstractPackedTable, str::String) = matchfirstrng(tab, _codeunits(str))
 function matchfirstrng(tab::AbstractPackedTable, str::Vector{T}) where {T}
     pos = searchsortedfirst(tab, str, lt=_ltvec)
     len = length(tab)
