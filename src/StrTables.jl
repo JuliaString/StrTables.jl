@@ -123,7 +123,7 @@ StrTable(strvec::Vector{<:AbstractString}) = pack_table(String, UInt8, strvec)
 Base.getindex(str::AbstractPackedTable{T}, ind::Integer) where {T} =
     T(str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]])
 Base.size(str::AbstractPackedTable) = (length(str.offsetvec)-1,)
-Base.IndexStyle(::Type{<:AbstractPackedTable}) = Base.LinearFast()
+Base.IndexStyle(::Type{<:AbstractPackedTable}) = Base.IndexLinear()
 Base.start(str::AbstractPackedTable) = 1
 Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
 Base.done(str::AbstractPackedTable, state) = state == length(str.offsetvec)
