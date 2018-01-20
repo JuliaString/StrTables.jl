@@ -25,7 +25,7 @@ module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 
 # Utility functions for building tables
-export create_vector, sortsplit!, _contains, _replace
+export create_vector, sortsplit!, _contains, _replace, _codeunits
 
 _codeunits(s)   = Vector{UInt8}(@static VERSION < v"0.7.0-DEV" ? s : codeunits(s))
 _contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : contains(s, r)
@@ -36,7 +36,7 @@ create_vector(T, len) = uninit(Vector{T}, len)
 
 @static if VERSION < v"0.7.0-DEV"
     const copyto! = copy!
-    export _codeunits, copyto!
+    export copyto!
 else
     using Dates
     export now
