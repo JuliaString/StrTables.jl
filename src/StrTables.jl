@@ -25,8 +25,9 @@ module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 
 # Utility functions for building tables
-export create_vector, sortsplit!, _contains, _replace, _codeunits
+export create_vector, sortsplit!, _contains, _replace, _codeunits, cvt_char
 
+cvt_char(s)     = @static VERSION < v"0.7.0-DEV" ? convert(Vector{Char}, s) : Vector{Char}(s)
 _codeunits(s)   = Vector{UInt8}(@static VERSION < v"0.7.0-DEV" ? s : codeunits(s))
 _contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : contains(s, r)
 _replace(s, p)  = @static VERSION < v"0.7.0-DEV" ? replace(s, p.first, p.second) : replace(s, p)
@@ -71,14 +72,6 @@ end
 
 PackedTable(::Type{T}, offvec::Vector{O}, namtab::Vector{S}) where {T,S,O} =
     PackedTable{T,S,O}(offvec, namtab)
-
-abstract type AbstractEntityTable <: AbstractVector{String} end
-
-"""
-Abstract type for Entity tables:
-Supports lookupname, matchchar, matches, longestmatches, completions
-"""
-AbstractEntityTable
 
 _getsize(el::String) = sizeof(el)
 _getsize(el::Vector{<:Any}) = length(el)
@@ -162,7 +155,20 @@ end
 
 """Return a vector of values that whose beginning matches the string"""
 matchfirst(tab::AbstractPackedTable, str) = tab[matchfirstrng(tab, str)]
-    
+
+## Support for AbstractEntityTables
+
+abstract type AbstractEntityTable <: AbstractVector{String} end
+
+"""
+Abstract type for Entity tables:
+Supports lookupname, matchchar, matches, longestmatches, completions
+"""
+AbstractEntityTable
+
+const _empty_str = ""
+const _empty_str_vec = Vector{String}()
+
 """Given an entity name, return the string it represents, or an empty string if not found"""
 function lookupname end
 
@@ -177,6 +183,69 @@ function longestmatches end
 
 """Given a string, return all of the entity names that start with that string, if any"""
 function completions end
+
+_get_table(ent::AbstractEntityTable) = ent
+_get_names(ent::AbstractEntityTable) = ent.nam
+
+matchchar(ent::AbstractEntityTable, ch) = matchchar(ent, UInt32(ch))
+matches(ent::AbstractEntityTable, str::AbstractString) = matches(ent, cvt_char(str))
+longestmatches(ent::AbstractEntityTable, str::AbstractString) = longestmatches(ent, cvt_char(str))
+
+completions(ent::AbstractEntityTable, str::AbstractString) = completions(ent, convert(String, str))
+completions(ent::AbstractEntityTable, str::String) = matchfirst(_get_names(ent), str)
+
+## default methods for most common packed string tables
+
+_get_val2c(ent::AbstractEntityTable, val) = string(Char(val>>>16), Char(val&0xffff))
+
+function _get_str(ent::AbstractEntityTable, ind)
+    tab = _get_table(ent)
+    ind <= tab.base32 && return string(Char(tab.val16[ind]))
+    ind <= tab.base2c && return string(Char(tab.val32[ind - tab.base32] + 0x10000))
+    _get_val2c(ent, tab.val2c[ind - tab.base2c])
+end
+
+function _get_strings(ent::AbstractEntityTable, val::T,
+                      vec::Vector{T}, ind::Vector{UInt16}) where {T}
+    rng = searchsorted(vec, val)
+    isempty(rng) ? _empty_str_vec : _get_names(ent)[ind[rng]]
+end
+
+function lookupname(ent::AbstractEntityTable, str::AbstractString)
+    rng = searchsorted(_get_names(ent), str)
+    isempty(rng) ? _empty_str : _get_str(ent, _get_table(ent).ind[rng.start])
+end
+
+function matchchar(ent::AbstractEntityTable, ch::UInt32)
+    tab = _get_table(ent)
+    (ch <= 0x0ffff
+     ? _get_strings(ent, ch%UInt16, tab.val16, tab.ind16)
+     : (ch <= 0x1ffff
+        ? _get_strings(ent, ch%UInt16, tab.val32, tab.ind32)
+        : _empty_str_vec))
+end
+
+function matches(tab::AbstractEntityTable, vec::Vector{T}) where {T}
+    tab = _get_table(ent)
+    if length(vec) == 1
+        matchchar(ent, vec[1])
+    elseif length(vec) == 2 && (vec[1] <= '\uffff' && vec[2] <= '\uffff')
+        _get_strings(ent, vec[1]%UInt32<<16 | vec[2]%UInt32, tab.val2c, tab.ind2c)
+    else
+        _empty_str_vec
+    end
+end
+
+function longestmatches(ent::AbstractEntityTable, vec::Vector{T}) where {T}
+    isempty(vec) && return _empty_str_vec
+    tab = _get_table(ent)
+    if length(vec) >= 2 && (vec[1] <= '\uffff' && vec[2] <= '\uffff')
+        res = _get_strings(ent, vec[1]%UInt32<<16 | vec[2]%UInt32, tab.val2c, tab.ind2c)
+        isempty(res) || return res
+        # Fall through and check only the first character
+    end
+    matchchar(ent, vec[1])
+end
 
 # Support for saving and loading
 
