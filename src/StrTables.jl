@@ -35,6 +35,10 @@ uninit(T, len)  = @static VERSION < v"0.7.0-DEV" ? T(len) : T(uninitialized, len
 
 create_vector(T, len) = uninit(Vector{T}, len)
 
+read_vector(s, T, len) =
+    @static VERSION < v"0.7.0-DEV" ? read(s, T, len) : read!(s, create_vector(T, len))
+
+
 @static if VERSION < v"0.7.0-DEV"
     const copyto! = copy!
     export copyto!
@@ -89,12 +93,6 @@ function pack_table(::Type{T}, ::Type{S}, strvec) where {T,S}
     (offset > 0x0ffff
      ? PackedTable{T,S,UInt32}(offvec, namvec)
      : PackedTable{T,S,UInt16}(copyto!(create_vector(UInt16, length(strvec)+1), offvec), namvec))
-end
-
-@static if VERSION < v"0.7.0-DEV"
-read_vector(s::IO, T::Type, len::Integer) = read(s, T, len)
-else
-read_vector(s::IO, T::Type, len::Integer) = read!(s, create_vector(T, len))
 end
 
 """Make a single table of a vector of elements of type T"""
