@@ -158,6 +158,8 @@ matchfirst(tab::AbstractPackedTable, str) = tab[matchfirstrng(tab, str)]
 
 ## Support for AbstractEntityTables
 
+export lookupname, matchchar, matches, longestmatches, completions
+
 abstract type AbstractEntityTable <: AbstractVector{String} end
 
 """
