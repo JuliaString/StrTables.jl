@@ -225,7 +225,7 @@ function matchchar(ent::AbstractEntityTable, ch::UInt32)
         : _empty_str_vec))
 end
 
-function matches(tab::AbstractEntityTable, vec::Vector{T}) where {T}
+function matches(ent::AbstractEntityTable, vec::Vector{T}) where {T}
     tab = _get_table(ent)
     if length(vec) == 1
         matchchar(ent, vec[1])
