@@ -184,67 +184,60 @@ function longestmatches end
 """Given a string, return all of the entity names that start with that string, if any"""
 function completions end
 
-_get_table(ent::AbstractEntityTable) = ent
-_get_names(ent::AbstractEntityTable) = ent.nam
+matchchar(tab::AbstractEntityTable, ch) = matchchar(tab, UInt32(ch))
+matches(tab::AbstractEntityTable, str::AbstractString) = matches(tab, cvt_char(str))
+longestmatches(tab::AbstractEntityTable, str::AbstractString) = longestmatches(tab, cvt_char(str))
 
-matchchar(ent::AbstractEntityTable, ch) = matchchar(ent, UInt32(ch))
-matches(ent::AbstractEntityTable, str::AbstractString) = matches(ent, cvt_char(str))
-longestmatches(ent::AbstractEntityTable, str::AbstractString) = longestmatches(ent, cvt_char(str))
-
-completions(ent::AbstractEntityTable, str::AbstractString) = completions(ent, convert(String, str))
-completions(ent::AbstractEntityTable, str::String) = matchfirst(_get_names(ent), str)
+completions(tab::AbstractEntityTable, str::AbstractString) = completions(tab, convert(String, str))
+completions(tab::AbstractEntityTable, str::String) = matchfirst(tab.nam, str)
 
 ## default methods for most common packed string tables
 
-_get_val2c(ent::AbstractEntityTable, val) = string(Char(val>>>16), Char(val&0xffff))
+_get_val2c(tab::AbstractEntityTable, val) = string(Char(val>>>16), Char(val&0xffff))
 
-function _get_str(ent::AbstractEntityTable, ind)
-    tab = _get_table(ent)
+function _get_str(tab::AbstractEntityTable, ind)
     ind <= tab.base32 && return string(Char(tab.val16[ind]))
     ind <= tab.base2c && return string(Char(tab.val32[ind - tab.base32] + 0x10000))
-    _get_val2c(ent, tab.val2c[ind - tab.base2c])
+    _get_val2c(tab, tab.val2c[ind - tab.base2c])
 end
 
-function _get_strings(ent::AbstractEntityTable, val::T,
+function _get_strings(tab::AbstractEntityTable, val::T,
                       vec::AbstractVector{T}, ind::Vector{UInt16}) where {T}
     rng = searchsorted(vec, val)
-    isempty(rng) ? _empty_str_vec : _get_names(ent)[ind[rng]]
+    isempty(rng) ? _empty_str_vec : tab.nam[ind[rng]]
 end
 
-function lookupname(ent::AbstractEntityTable, str::AbstractString)
-    rng = searchsorted(_get_names(ent), str)
-    isempty(rng) ? _empty_str : _get_str(ent, _get_table(ent).ind[rng.start])
+function lookupname(tab::AbstractEntityTable, str::AbstractString)
+    rng = searchsorted(tab.nam, str)
+    isempty(rng) ? _empty_str : _get_str(tab, tab.ind[rng.start])
 end
 
-function matchchar(ent::AbstractEntityTable, ch::UInt32)
-    tab = _get_table(ent)
+function matchchar(tab::AbstractEntityTable, ch::UInt32)
     (ch <= 0x0ffff
-     ? _get_strings(ent, ch%UInt16, tab.val16, tab.ind16)
+     ? _get_strings(tab, ch%UInt16, tab.val16, tab.ind16)
      : (ch <= 0x1ffff
-        ? _get_strings(ent, ch%UInt16, tab.val32, tab.ind32)
+        ? _get_strings(tab, ch%UInt16, tab.val32, tab.ind32)
         : _empty_str_vec))
 end
 
-function matches(ent::AbstractEntityTable, vec::Vector{T}) where {T}
-    tab = _get_table(ent)
+function matches(tab::AbstractEntityTable, vec::Vector{T}) where {T}
     if length(vec) == 1
-        matchchar(ent, vec[1])
+        matchchar(tab, vec[1])
     elseif length(vec) == 2 && ((v1 = vec[1]%UInt32) <= 0x0ffff && (v2 = vec[2]%UInt32) <= 0x0ffff)
-        _get_strings(ent, v1<<16 | v2, tab.val2c, tab.ind2c)
+        _get_strings(tab, v1<<16 | v2, tab.val2c, tab.ind2c)
     else
         _empty_str_vec
     end
 end
 
-function longestmatches(ent::AbstractEntityTable, vec::Vector{T}) where {T}
+function longestmatches(tab::AbstractEntityTable, vec::Vector{T}) where {T}
     isempty(vec) && return _empty_str_vec
-    tab = _get_table(ent)
     if length(vec) >= 2 && (v1 = vec[1]%UInt32) <= 0x0ffff && (v2 = vec[2]%UInt32) <= 0x0ffff
-        res = _get_strings(ent, v1<<16 | v2, tab.val2c, tab.ind2c)
+        res = _get_strings(tab, v1<<16 | v2, tab.val2c, tab.ind2c)
         isempty(res) || return res
         # Fall through and check only the first character
     end
-    matchchar(ent, vec[1])
+    matchchar(tab, vec[1])
 end
 
 # Support for saving and loading
