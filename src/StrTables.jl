@@ -188,8 +188,8 @@ matchchar(tab::AbstractEntityTable, ch) = matchchar(tab, UInt32(ch))
 matches(tab::AbstractEntityTable, str::AbstractString) = matches(tab, cvt_char(str))
 longestmatches(tab::AbstractEntityTable, str::AbstractString) = longestmatches(tab, cvt_char(str))
 
-completions(tab::AbstractEntityTable, str::AbstractString) = completions(tab, convert(String, str))
-completions(tab::AbstractEntityTable, str::String) = matchfirst(tab.nam, str)
+completions(tab::AbstractEntityTable, str::AbstractString) =
+    matchfirst(tab.nam, convert(String, str))
 
 ## default methods for most common packed string tables
 
