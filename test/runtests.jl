@@ -1,12 +1,7 @@
 using StrTables
 
-@static if VERSION < v"0.7.0-DEV"
-    using Base.Test
-    const islinux = is_linux
-else
-    using Test
-    using Sys: islinux
-end
+@static VERSION < v"0.7.0-DEV" ? (using Base.Test) : (using Test)
+const _islinux = (@static VERSION < v"0.7.0-DEV" ? is_linux : Sys.islinux)
 
 ST = StrTables
 
@@ -67,7 +62,7 @@ testout = [stab, btab,
     io = IOBuffer(b"\x7f")
     @test_throws ErrorException ST.read_value(io)
     @static if sizeof(Int) > 4
-        @static if !islinux()
+        @static if !_islinux()
             x = IOBuffer(2^32) ; x.size = 2^32
             @test_throws ErrorException ST.write_value(io, String(x))
         end
