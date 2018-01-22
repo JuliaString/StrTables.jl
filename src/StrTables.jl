@@ -206,7 +206,7 @@ function _get_str(ent::AbstractEntityTable, ind)
 end
 
 function _get_strings(ent::AbstractEntityTable, val::T,
-                      vec::Vector{T}, ind::Vector{UInt16}) where {T}
+                      vec::AbstractVector{T}, ind::Vector{UInt16}) where {T}
     rng = searchsorted(vec, val)
     isempty(rng) ? _empty_str_vec : _get_names(ent)[ind[rng]]
 end
@@ -229,8 +229,8 @@ function matches(ent::AbstractEntityTable, vec::Vector{T}) where {T}
     tab = _get_table(ent)
     if length(vec) == 1
         matchchar(ent, vec[1])
-    elseif length(vec) == 2 && (vec[1] <= '\uffff' && vec[2] <= '\uffff')
-        _get_strings(ent, vec[1]%UInt32<<16 | vec[2]%UInt32, tab.val2c, tab.ind2c)
+    elseif length(vec) == 2 && ((v1 = vec[1]%UInt32) <= 0x0ffff && (v2 = vec[2]%UInt32) <= 0x0ffff)
+        _get_strings(ent, v1<<16 | v2, tab.val2c, tab.ind2c)
     else
         _empty_str_vec
     end
@@ -239,8 +239,8 @@ end
 function longestmatches(ent::AbstractEntityTable, vec::Vector{T}) where {T}
     isempty(vec) && return _empty_str_vec
     tab = _get_table(ent)
-    if length(vec) >= 2 && (vec[1] <= '\uffff' && vec[2] <= '\uffff')
-        res = _get_strings(ent, vec[1]%UInt32<<16 | vec[2]%UInt32, tab.val2c, tab.ind2c)
+    if length(vec) >= 2 && (v1 = vec[1]%UInt32) <= 0x0ffff && (v2 = vec[2]%UInt32) <= 0x0ffff
+        res = _get_strings(ent, v1<<16 | v2, tab.val2c, tab.ind2c)
         isempty(res) || return res
         # Fall through and check only the first character
     end
