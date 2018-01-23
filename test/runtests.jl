@@ -12,7 +12,7 @@ teststrs = sort(["AA", "AAAAA",
                  "Scott", "Zulima", "David", "Alex", "Jules", "Gandalf",
                  "\U1f596 Spock Hands"])
 stab     = StrTable(teststrs)
-testbin  = [Vector{UInt8}(s) for s in stab]
+testbin  = [_codeunits(s) for s in stab]
 btab     = PackedTable(testbin)
 
 const strs = ("AA", "\U1f596 Spock Hands", "A", "Julia", "My name is Julia")
@@ -64,7 +64,7 @@ testout = [stab, btab,
     @static if sizeof(Int) > 4
         @static if !_islinux()
             x = IOBuffer(2^32) ; x.size = 2^32
-            @test_throws ErrorException ST.write_value(io, String(x))
+            @test_throws ErrorException ST.write_value(io, String(take!(x)))
         end
     end
 end
