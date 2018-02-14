@@ -43,9 +43,11 @@ read_vector(s, T, len) =
     const copyto! = copy!
     export copyto!
 else
-    using Dates
+    using Dates, Pkg
     export now
 end
+const pkg_dir = Pkg.dir
+export pkg_dir
 
 function sortsplit!(index::Vector{UInt16}, vec::Vector{Tuple{T, UInt16}}, base) where {T}
     sort!(vec)
