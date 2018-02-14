@@ -5,7 +5,7 @@ const _islinux = (@static VERSION < v"0.7.0-DEV" ? is_linux : Sys.islinux)
 
 ST = StrTables
 
-const testfile = joinpath(Pkg.dir("StrTables"), "test", "test.dat")
+const testfile = joinpath(pkg_dir("StrTables"), "test", "test.dat")
 
 teststrs = sort(["AA", "AAAAA",
                  "JuliaLang", "Julia", "JuliaIO", "JuliaDB", "JuliaString",
