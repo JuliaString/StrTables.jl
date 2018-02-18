@@ -63,7 +63,8 @@ testout = [stab, btab,
     @test_throws ErrorException ST.read_value(io)
     @static if sizeof(Int) > 4
         @static if !_islinux()
-            x = IOBuffer(2^32) ; x.size = 2^32
+            x = @static VERSION < v"0.7.0-DEV" ? IOBuffer(2^32) : IOBuffer(maxsize=2^32)
+            x.size = 2^32
             @test_throws ErrorException ST.write_value(io, String(take!(x)))
         end
     end
