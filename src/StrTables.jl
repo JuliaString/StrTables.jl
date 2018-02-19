@@ -168,6 +168,10 @@ Supports lookupname, matchchar, matches, longestmatches, completions
 """
 AbstractEntityTable
 
+Base.getindex(str::AbstractEntityTable, ind::Integer) = String(str.nam[ind])
+Base.size(str::AbstractEntityTable) = (length(str.ind),)
+Base.done(str::AbstractEntityTable, state) = state == length(str.ind)
+
 const _empty_str = ""
 const _empty_str_vec = Vector{String}()
 
