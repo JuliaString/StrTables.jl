@@ -32,8 +32,7 @@ cvt_char(s)     = @static VERSION < v"0.7.0-DEV" ? convert(Vector{Char}, s) : Ve
 _codeunits(s)   = Vector{UInt8}(@static VERSION < v"0.7.0-DEV" ? s : codeunits(s))
 _contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : contains(s, r)
 _replace(s, p)  = @static VERSION < v"0.7.0-DEV" ? replace(s, p.first, p.second) : replace(s, p)
-uninit(T, len)  = @static VERSION < v"0.7.0-DEV" ? T(len) : T(uninitialized, len)
-create_vector(T, len) = uninit(Vector{T}, len)
+create_vector(T, len)  = @static VERSION < v"0.7.0-DEV" ? Vector{T}(len) : Vector{T}(undef, len)
 
 read_vector(s, T, len) =
     @static VERSION < v"0.7.0-DEV" ? read(s, T, len) : read!(s, create_vector(T, len))
