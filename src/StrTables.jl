@@ -30,7 +30,7 @@ export create_vector, sortsplit!, _contains, _replace, _codeunits, cvt_char, par
 parse_hex(T, s) = @static VERSION < v"0.7.0-DEV" ? parse(T, s, 16) : parse(T, s, base=16)
 cvt_char(s)     = @static VERSION < v"0.7.0-DEV" ? convert(Vector{Char}, s) : Vector{Char}(s)
 _codeunits(s)   = Vector{UInt8}(@static VERSION < v"0.7.0-DEV" ? s : codeunits(s))
-_contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : contains(s, r)
+_contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : occursin(r, s)
 _replace(s, p)  = @static VERSION < v"0.7.0-DEV" ? replace(s, p.first, p.second) : replace(s, p)
 create_vector(T, len)  = @static VERSION < v"0.7.0-DEV" ? Vector{T}(len) : Vector{T}(undef, len)
 
