@@ -119,6 +119,8 @@ Base.IndexStyle(::Type{<:AbstractPackedTable}) = Base.IndexLinear()
 Base.start(str::AbstractPackedTable) = 1
 Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
 Base.done(str::AbstractPackedTable, state) = state == length(str.offsetvec)
+@static VERSION >= v"0.7.0-DEV.5127" &&
+    (Base.iterate(str::AbstractPackedTable, state) = (getindex(str, state), state+1))
 
 # Get all indices that start with a string
 
