@@ -24,21 +24,20 @@ License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LIC
 module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 
+const V6_COMPAT = VERSION < v"0.7.0-DEV"
+
 # Utility functions for building tables
 export create_vector, sortsplit!, _contains, _replace, _codeunits, cvt_char, parse_hex
 
-parse_hex(T, s) = @static VERSION < v"0.7.0-DEV" ? parse(T, s, 16) : parse(T, s, base=16)
-cvt_char(s)     = @static VERSION < v"0.7.0-DEV" ? convert(Vector{Char}, s) : Vector{Char}(s)
-_codeunits(s)   = Vector{UInt8}(@static VERSION < v"0.7.0-DEV" ? s : codeunits(s))
-_contains(s, r) = @static VERSION < v"0.7.0-DEV" ? ismatch(r, s) : occursin(r, s)
-_replace(s, p)  = @static VERSION < v"0.7.0-DEV" ? replace(s, p.first, p.second) : replace(s, p)
-create_vector(T, len)  = @static VERSION < v"0.7.0-DEV" ? Vector{T}(len) : Vector{T}(undef, len)
+parse_hex(T, s) = @static V6_COMPAT ? parse(T, s, 16) : parse(T, s, base=16)
+cvt_char(s)     = @static V6_COMPAT ? convert(Vector{Char}, s) : Vector{Char}(s)
+_codeunits(s)   = Vector{UInt8}(@static V6_COMPAT ? s : codeunits(s))
+_contains(s, r) = @static V6_COMPAT ? ismatch(r, s) : occursin(r, s)
+_replace(s, p)  = @static V6_COMPAT ? replace(s, p.first, p.second) : replace(s, p)
+create_vector(T, len)  = @static V6_COMPAT ? Vector{T}(len) : Vector{T}(undef, len)
+read_vector(s, T, len) = @static V6_COMPAT ? read(s, T, len) : read!(s, create_vector(T, len))
 
-read_vector(s, T, len) =
-    @static VERSION < v"0.7.0-DEV" ? read(s, T, len) : read!(s, create_vector(T, len))
-
-
-@static if VERSION < v"0.7.0-DEV"
+@static if V6_COMPAT
     const copyto! = copy!
     export copyto!
 else
@@ -118,9 +117,10 @@ Base.size(str::AbstractPackedTable) = (length(str.offsetvec)-1,)
 Base.IndexStyle(::Type{<:AbstractPackedTable}) = Base.IndexLinear()
 Base.start(str::AbstractPackedTable) = 1
 Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
-Base.done(str::AbstractPackedTable, state) = state == length(str.offsetvec)
+Base.done(str::AbstractPackedTable, state) = state >= length(str.offsetvec)
 @static VERSION >= v"0.7.0-DEV.5127" &&
-    (Base.iterate(str::AbstractPackedTable, state) = (getindex(str, state), state+1))
+    (Base.iterate(str::AbstractPackedTable, state::Integer=1) =
+     state < length(str.offsetvec) ? (getindex(str, state), state+1) : nothing)
 
 # Get all indices that start with a string
 
