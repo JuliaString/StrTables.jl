@@ -1,9 +1,37 @@
 # StrTables
 
-| **Info** | **Package Status** | **Package Evaluator** | **Coverage** |
-|:------------------:|:------------------:|:---------------------:|:-----------------:|
-| [![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](LICENSE.md) | [![Build Status](https://travis-ci.org/JuliaString/StrFormat.jl.svg?branch=master)](https://travis-ci.org/JuliaString/StrFormat.jl) | [![StrFormat](http://pkg.julialang.org/badges/StrFormat_0.6.svg)](http://pkg.julialang.org/?pkg=StrFormat) | [![Coverage Status](https://coveralls.io/repos/github/JuliaString/StrFormat.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaString/StrFormat.jl?branch=master) |
-| [![Gitter Chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/JuliaString/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge) | | [![StrFormat](http://pkg.julialang.org/badges/StrFormat_0.7.svg)](http://pkg.julialang.org/?pkg=StrFormat) | [![codecov.io](http://codecov.io/github/JuliaString/StrFormat.jl/coverage.svg?branch=master)](http://codecov.io/github/JuliaString/StrFormat.jl?branch=master) |
+| **Info** | **Windows** | **Linux & MacOS** | **Package Evaluator** | **CodeCov** | **Coveralls** |
+|:------------------:|:------------------:|:---------------------:|:-----------------:|:---------------------:|:-----------------:|
+| [![][license-img]][license-url] | [![][app-s-img]][app-s-url] | [![][travis-s-img]][travis-url] | [![][pkg-s-img]][pkg-s-url] | [![][codecov-img]][codecov-url] | [![][coverall-s-img]][coverall-s-url]
+| [![][gitter-img]][gitter-url] | [![][app-m-img]][app-m-url] | [![][travis-m-img]][travis-url] | [![][pkg-m-img]][pkg-m-url] | [![][codecov-img]][codecov-url] | [![][coverall-m-img]][coverall-m-url]
+
+[license-img]:  http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat
+[license-url]:  LICENSE.md
+
+[gitter-img]:   https://badges.gitter.im/Join%20Chat.svg
+[gitter-url]:   https://gitter.im/JuliaString/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
+
+[travis-url]:   https://travis-ci.org/JuliaString/StrTables.jl
+[travis-s-img]: https://travis-ci.org/JuliaString/StrTables.jl.svg
+[travis-m-img]: https://travis-ci.org/JuliaString/StrTables.jl.svg?branch=master
+
+[app-s-url]:    https://ci.appveyor.com/project/ScottPJones/strtables-jl
+[app-m-url]:    https://ci.appveyor.com/project/ScottPJones/strtables-jl/branch/master
+[app-s-img]:    https://ci.appveyor.com/api/projects/status/ekt5t6nt8g0cqhjb?svg=true
+[app-m-img]:    https://ci.appveyor.com/api/projects/status/ekt5t6nt8g0cqhjb/branch/master?svg=true
+
+[pkg-s-url]:    http://pkg.julialang.org/detail/StrTables
+[pkg-m-url]:    http://pkg.julialang.org/detail/StrTables
+[pkg-s-img]:    http://pkg.julialang.org/badges/StrTables_0.6.svg
+[pkg-m-img]:    http://pkg.julialang.org/badges/StrTables_0.7.svg
+
+[codecov-url]:  https://codecov.io/gh/JuliaString/StrTables.jl
+[codecov-img]:  https://codecov.io/gh/JuliaString/StrTables.jl/branch/master/graph/badge.svg
+
+[coverall-s-url]: https://coveralls.io/github/JuliaString/StrTables.jl
+[coverall-m-url]: https://coveralls.io/github/JuliaString/StrTables.jl?branch=master
+[coverall-s-img]: https://coveralls.io/repos/github/JuliaString/StrTables.jl/badge.svg
+[coverall-m-img]: https://coveralls.io/repos/github/JuliaString/StrTables.jl/badge.svg?branch=master
 
 StrTables.jl: Support for creating packed tables of strings and save/load simple tables with values
 ====================================================================
