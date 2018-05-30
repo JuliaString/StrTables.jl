@@ -1,4 +1,5 @@
-# StrTables
+# StrTables:
+## Support for creating packed tables of strings and save/load simple tables with values
 
 | **Info** | **Windows** | **Linux & MacOS** | **Package Evaluator** | **CodeCov** | **Coveralls** |
 |:------------------:|:------------------:|:---------------------:|:-----------------:|:---------------------:|:-----------------:|
@@ -32,9 +33,6 @@
 [coverall-m-url]: https://coveralls.io/github/JuliaString/StrTables.jl?branch=master
 [coverall-s-img]: https://coveralls.io/repos/github/JuliaString/StrTables.jl/badge.svg
 [coverall-m-img]: https://coveralls.io/repos/github/JuliaString/StrTables.jl/badge.svg?branch=master
-
-StrTables.jl: Support for creating packed tables of strings and save/load simple tables with values
-====================================================================
 
 This is used to build compact tables that can be used to create things like entity mappings
 It also provides simple load/save functions to save and then load string tables along with
