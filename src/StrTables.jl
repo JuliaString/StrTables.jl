@@ -41,7 +41,7 @@ read_vector(s, T, len) = @static V6_COMPAT ? read(s, T, len) : read!(s, create_v
     const copyto! = copy!
     export copyto!
 else
-    using Dates, Pkg
+    using Dates
     export now
 end
 
