@@ -113,12 +113,14 @@ Base.getindex(str::AbstractPackedTable{T}, ind::Integer) where {T} =
     T(str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]])
 Base.size(str::AbstractPackedTable) = (length(str.offsetvec)-1,)
 Base.IndexStyle(::Type{<:AbstractPackedTable}) = Base.IndexLinear()
-Base.start(str::AbstractPackedTable) = 1
-Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
-Base.done(str::AbstractPackedTable, state) = state >= length(str.offsetvec)
-@static VERSION >= v"0.7.0-DEV.5127" &&
+@static if VERSION >= v"0.7.0-DEV.5127"
     (Base.iterate(str::AbstractPackedTable, state::Integer=1) =
      state < length(str.offsetvec) ? (getindex(str, state), state+1) : nothing)
+else
+    Base.start(str::AbstractPackedTable) = 1
+    Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
+    Base.done(str::AbstractPackedTable, state) = state >= length(str.offsetvec)
+end
 
 # Get all indices that start with a string
 
@@ -169,7 +171,9 @@ AbstractEntityTable
 
 Base.getindex(str::AbstractEntityTable, ind::Integer) = String(str.nam[ind])
 Base.size(str::AbstractEntityTable) = (length(str.ind),)
+@static if VERSION < v"0.7.0-DEV.5127"
 Base.done(str::AbstractEntityTable, state) = state == length(str.ind)
+end
 
 const _empty_str = ""
 const _empty_str_vec = Vector{String}()
