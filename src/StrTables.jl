@@ -24,7 +24,7 @@ License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LIC
 module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 
-const V6_COMPAT = VERSION < v"0.7.0-DEV"
+const V6_COMPAT = VERSION < v"0.7-"
 
 # Utility functions for building tables
 export create_vector, sortsplit!, _contains, _replace, _codeunits, cvt_char, parse_hex
