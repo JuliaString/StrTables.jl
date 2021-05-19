@@ -21,12 +21,7 @@
 
 [contrib]:    https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat
 
-[![][release]][pkg-url] [![][release-date]][pkg-url] [![][license-img]][license-url] [![contributions welcome][contrib]](https://github.com/JuliaString/StrTables.jl/issues)
-
-| **Julia Version** | **Unit Tests** | **Coverage** |
-|:------------------:|:------------------:|:---------------------:|
-| [![][julia-release]][julia-url] | | [![][codecov-img]][codecov-url]
-| Julia Latest | [![][checks]][pkg-url] | [![][codecov-img]][codecov-url]
+[![][release]][pkg-url] [![][release-date]][pkg-url] [![][checks]][pkg-url] [![][codecov-img]][codecov-url] [![][license-img]][license-url] [![contributions welcome][contrib]](https://github.com/JuliaString/StrTables.jl/issues)
 
 This is used to build compact tables that can be used to create things like entity mappings
 It also provides simple load/save functions to save and then load string tables along with
