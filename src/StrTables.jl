@@ -1,9 +1,8 @@
-__precompile__()
 """
 Simple String Table and load/save functions
 
 Author:     Scott Paul Jones
-Copyright:  2017-2018 Gandalf Software, Inc (and any future contributors)
+Copyright:  2017-2021 Gandalf Software, Inc (and any future contributors)
 License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LICENSE.md)
 
 ## Public API:
@@ -24,26 +23,19 @@ License:    MIT (see https://github.com/JuliaString/StrTables.jl/blob/master/LIC
 module StrTables
 export StrTable, PackedTable, AbstractPackedTable, AbstractEntityTable
 
-const V6_COMPAT = VERSION < v"0.7-"
-
 # Utility functions for building tables
 export create_vector, sortsplit!, _contains, _replace, _codeunits, cvt_char, parse_hex
 
-parse_hex(T, s) = @static V6_COMPAT ? parse(T, s, 16) : parse(T, s, base=16)
-cvt_char(s)     = @static V6_COMPAT ? convert(Vector{Char}, s) : Vector{Char}(s)
-_codeunits(s)   = Vector{UInt8}(@static V6_COMPAT ? s : codeunits(s))
-_contains(s, r) = @static V6_COMPAT ? ismatch(r, s) : occursin(r, s)
-_replace(s, p)  = @static V6_COMPAT ? replace(s, p.first, p.second) : replace(s, p)
-create_vector(T, len)  = @static V6_COMPAT ? Vector{T}(len) : Vector{T}(undef, len)
-read_vector(s, T, len) = @static V6_COMPAT ? read(s, T, len) : read!(s, create_vector(T, len))
+parse_hex(T, s) = parse(T, s, base=16)
+cvt_char(s)     = Vector{Char}(s)
+_codeunits(s)   = Vector{UInt8}(codeunits(s))
+_contains(s, r) = occursin(r, s)
+_replace(s, p)  = replace(s, p)
+create_vector(T, len)  = Vector{T}(undef, len)
+read_vector(s, T, len) = read!(s, create_vector(T, len))
 
-@static if V6_COMPAT
-    const copyto! = copy!
-    export copyto!
-else
-    using Dates
-    export now
-end
+using Dates
+export now
 
 function sortsplit!(index::Vector{UInt16}, vec::Vector{Tuple{T, UInt16}}, base) where {T}
     sort!(vec)
@@ -113,14 +105,8 @@ Base.getindex(str::AbstractPackedTable{T}, ind::Integer) where {T} =
     T(str.namtab[str.offsetvec[ind]+1:str.offsetvec[ind+1]])
 Base.size(str::AbstractPackedTable) = (length(str.offsetvec)-1,)
 Base.IndexStyle(::Type{<:AbstractPackedTable}) = Base.IndexLinear()
-@static if VERSION >= v"0.7.0-DEV.5127"
-    (Base.iterate(str::AbstractPackedTable, state::Integer=1) =
-     state < length(str.offsetvec) ? (getindex(str, state), state+1) : nothing)
-else
-    Base.start(str::AbstractPackedTable) = 1
-    Base.next(str::AbstractPackedTable, state) = (getindex(str, state), state+1)
-    Base.done(str::AbstractPackedTable, state) = state >= length(str.offsetvec)
-end
+Base.iterate(str::AbstractPackedTable, state::Integer=1) =
+    state < length(str.offsetvec) ? (getindex(str, state), state+1) : nothing
 
 # Get all indices that start with a string
 
